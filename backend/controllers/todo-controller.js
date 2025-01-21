@@ -24,8 +24,18 @@ const getTodoById = async (req, res) => {
 };
 
 // Create a new todo
-const createTodo = async (req, res) => {
+const createTodo = async (req, res, next) => {
   try {
+    // Check for duplicate todo
+    const existingTodo = await Todo.findOne({
+      text: req.body.text.toLowerCase(),
+      userId: req.body.userId || "64f7c97e1d3b7e001c3b3b3b",
+    });
+
+    if (existingTodo) {
+      return res.status(400).json({ message: "This todo already exists" });
+    }
+
     const todo = new Todo({
       text: req.body.text,
       completed: false,
@@ -35,12 +45,12 @@ const createTodo = async (req, res) => {
     const newTodo = await todo.save();
     res.status(201).json(newTodo);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };
 
 // Update a todo
-const updateTodo = async (req, res) => {
+const updateTodo = async (req, res, next) => {
   try {
     const todo = await Todo.findById(req.params.id);
     if (!todo) {
@@ -53,7 +63,7 @@ const updateTodo = async (req, res) => {
     const updatedTodo = await todo.save();
     res.status(200).json(updatedTodo);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };
 

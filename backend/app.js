@@ -3,22 +3,35 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const connectDB = require("./config/database");
+const timeout = require("connect-timeout");
 
 const app = express();
+
+// Connect to MongoDB
+connectDB();
 
 // Middleware setup
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: ["http://localhost:3000", "http://localhost:5173"], // Allow both ports
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type"],
+    credentials: true,
   })
 );
 
+app.use(timeout("15s")); // Set timeout to 15 seconds
+app.use(haltOnTimedout);
+
+function haltOnTimedout(req, res, next) {
+  if (!req.timedout) next();
+}
+
 // Routes setup
-const todoRoutes = require("./routes/todos");
+const todoRoutes = require("./routes/todos-routes");
 
 app.use("/api/todos", todoRoutes);
 
@@ -28,29 +41,17 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: err.message || "Something went wrong!" });
 });
 
-// Update MongoDB connection to use environment variables
-mongoose
-  .connect(
-    `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_CLUSTER}.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`
-  )
-  .then(() => {
-    const port = process.env.PORT || 5000;
-    const server = app.listen(port, () => {
-      console.log(`Server running on port ${port}`);
-    });
+// Start server
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
-    // Handle proper shutdown
-    process.on("SIGTERM", () => {
-      console.log("SIGTERM received. Shutting down gracefully");
-      server.close(() => {
-        mongoose.connection.close(false, () => {
-          console.log("MongoDB connection closed");
-          process.exit(0);
-        });
-      });
-    });
-  })
-  .catch((err) => {
-    console.error("MongoDB connection error:", err);
+// Handle unhandled promise rejections
+process.on("unhandledRejection", (err) => {
+  console.log("UNHANDLED REJECTION! 💥 Shutting down...");
+  console.log(err.name, err.message);
+  server.close(() => {
     process.exit(1);
   });
+});

@@ -1,29 +1,78 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import TodoList from "./components/TodoList";
 import TodoForm from "./components/TodoForm";
 import ErrorMessage from "./components/ErrorMessage";
 import BackgroundAnimation from "./components/BackgroundAnimation";
+import LoadingSpinner from "./components/LoadingSpinner";
+import { useHttpClient } from "./hooks/useHttpClient";
 import "./App.css";
 
 function App() {
   const [todos, setTodos] = useState([]);
-  const [error, setError] = useState("");
+  const { isLoading, error, sendRequest, clearError } = useHttpClient();
 
-  const handleAddTodo = (newTodo) => {
-    setTodos([...todos, { id: Date.now(), text: newTodo, completed: false }]);
+  useEffect(() => {
+    let isActive = true;
+
+    const fetchTodos = async () => {
+      try {
+        const data = await sendRequest("http://localhost:5000/api/todos");
+        if (isActive) {
+          setTodos(data);
+        }
+      } catch (err) {
+        // Error is handled by the hook
+      }
+    };
+
+    fetchTodos();
+
+    return () => {
+      isActive = false;
+    };
+  }, [sendRequest]);
+
+  const handleAddTodo = async (newTodo) => {
+    try {
+      const data = await sendRequest(
+        "http://localhost:5000/api/todos",
+        "POST",
+        JSON.stringify({ text: newTodo, completed: false }),
+        {
+          "Content-Type": "application/json",
+        }
+      );
+      setTodos([...todos, data]);
+    } catch (err) {
+      // Error is handled by the hook
+    }
   };
 
-  const handleToggleTodo = (id) => {
-    setTodos(
-      todos.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      )
-    );
+  const handleToggleTodo = async (id) => {
+    try {
+      const todo = todos.find((t) => t._id === id);
+      const updatedTodo = await sendRequest(
+        `http://localhost:5000/api/todos/${id}`,
+        "PUT",
+        JSON.stringify({ completed: !todo.completed }),
+        {
+          "Content-Type": "application/json",
+        }
+      );
+      setTodos(todos.map((todo) => (todo._id === id ? updatedTodo : todo)));
+    } catch (err) {
+      // Error is handled by the hook
+    }
   };
 
-  const handleDeleteTodo = (id) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
+  const handleDeleteTodo = async (id) => {
+    try {
+      await sendRequest(`http://localhost:5000/api/todos/${id}`, "DELETE");
+      setTodos(todos.filter((todo) => todo._id !== id));
+    } catch (err) {
+      // Error is handled by the hook
+    }
   };
 
   return (
@@ -33,7 +82,7 @@ function App() {
       animate={{ opacity: 1 }}
     >
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-xl overflow-hidden p-6">
-        <ErrorMessage error={error} />
+        <ErrorMessage error={error} onClose={clearError} />
 
         <motion.h1
           className="text-3xl font-bold text-gray-800 mb-8 text-center"
@@ -44,7 +93,11 @@ function App() {
           Todo List
         </motion.h1>
 
-        <TodoForm onAddTodo={handleAddTodo} setError={setError} todos={todos} />
+        <TodoForm
+          onAddTodo={handleAddTodo}
+          setError={clearError}
+          todos={todos}
+        />
 
         <TodoList
           todos={todos}
@@ -52,7 +105,20 @@ function App() {
           onDeleteTodo={handleDeleteTodo}
         />
 
-        {todos.length === 0 && (
+        <AnimatePresence>
+          {isLoading && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="my-4"
+            >
+              <LoadingSpinner />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {!isLoading && todos.length === 0 && (
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

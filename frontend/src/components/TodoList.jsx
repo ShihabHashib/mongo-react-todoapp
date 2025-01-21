@@ -8,7 +8,7 @@ const TodoList = ({ todos, onToggleTodo, onDeleteTodo }) => {
       <AnimatePresence>
         {todos.map((todo) => (
           <TodoItem
-            key={todo.id}
+            key={todo._id}
             todo={todo}
             onToggle={onToggleTodo}
             onDelete={onDeleteTodo}
@@ -22,7 +22,7 @@ const TodoList = ({ todos, onToggleTodo, onDeleteTodo }) => {
 TodoList.propTypes = {
   todos: PropTypes.arrayOf(
     PropTypes.shape({
-      id: PropTypes.number.isRequired,
+      _id: PropTypes.string.isRequired,
       text: PropTypes.string.isRequired,
       completed: PropTypes.bool.isRequired,
     })

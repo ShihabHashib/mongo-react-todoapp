@@ -14,7 +14,7 @@ const TodoItem = ({ todo, onToggle, onDelete }) => {
         <motion.button
           whileHover={{ scale: 1.2 }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => onToggle(todo.id)}
+          onClick={() => onToggle(todo._id)}
         >
           <CheckCircleIcon
             className={`w-6 h-6 ${
@@ -33,7 +33,7 @@ const TodoItem = ({ todo, onToggle, onDelete }) => {
       <motion.button
         whileHover={{ scale: 1.2 }}
         whileTap={{ scale: 0.9 }}
-        onClick={() => onDelete(todo.id)}
+        onClick={() => onDelete(todo._id)}
         className="text-red-500"
       >
         <TrashIcon className="w-5 h-5" />
@@ -44,7 +44,7 @@ const TodoItem = ({ todo, onToggle, onDelete }) => {
 
 TodoItem.propTypes = {
   todo: PropTypes.shape({
-    id: PropTypes.number.isRequired,
+    _id: PropTypes.string.isRequired,
     text: PropTypes.string.isRequired,
     completed: PropTypes.bool.isRequired,
   }).isRequired,

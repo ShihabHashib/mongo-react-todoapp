@@ -1,54 +1,28 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import PropTypes from "prop-types";
+import { validateTodo } from "../utils/validation";
 
 const TodoForm = ({ onAddTodo, setError, todos }) => {
   const [newTodo, setNewTodo] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const validateTodo = (text) => {
-    if (!text || !text.trim()) {
-      return "Please enter a todo item";
-    }
-
-    const trimmedText = text.trim();
-
-    if (trimmedText.length < 3) {
-      return "Todo must be at least 3 characters long";
-    }
-    if (trimmedText.length > 100) {
-      return "Todo must be less than 100 characters";
-    }
-
-    if (!/^[\w\s.,!?()-]+$/i.test(trimmedText)) {
-      return "Todo can only contain letters, numbers, and basic punctuation";
-    }
-
-    if (
-      todos.some(
-        (todo) => todo.text.toLowerCase() === trimmedText.toLowerCase()
-      )
-    ) {
-      return "This todo already exists";
-    }
-
-    if (!/[a-zA-Z0-9]+/.test(trimmedText)) {
-      return "Todo must contain at least one letter or number";
-    }
-
-    return "";
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const validationError = validateTodo(newTodo);
-    if (validationError) {
-      setError(validationError);
-      return;
+    setIsSubmitting(true);
+
+    try {
+      const validatedTodo = validateTodo(newTodo, todos);
+      await onAddTodo(validatedTodo);
+      setNewTodo("");
+      setError("");
+    } catch (err) {
+      setError(err.message || "Failed to add todo");
+      console.error("Validation error:", err);
+    } finally {
+      setIsSubmitting(false);
     }
-    setError("");
-    onAddTodo(newTodo.trim());
-    setNewTodo("");
   };
 
   return (
@@ -57,21 +31,48 @@ const TodoForm = ({ onAddTodo, setError, todos }) => {
         <motion.input
           type="text"
           value={newTodo}
-          onChange={(e) => setNewTodo(e.target.value)}
+          onChange={(e) => {
+            setNewTodo(e.target.value);
+            setError(""); // Clear error when user starts typing
+          }}
           placeholder="Add a new todo..."
           className="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-purple-500"
           whileFocus={{ scale: 1.02 }}
+          disabled={isSubmitting}
         />
         <motion.button
           type="submit"
-          className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+            isSubmitting
+              ? "bg-purple-400 cursor-not-allowed"
+              : "bg-purple-600 hover:bg-purple-700"
+          } text-white transition-colors`}
+          whileHover={!isSubmitting ? { scale: 1.05 } : {}}
+          whileTap={!isSubmitting ? { scale: 0.95 } : {}}
+          disabled={isSubmitting}
         >
           <PlusIcon className="w-5 h-5" />
-          Add
+          {isSubmitting ? "Adding..." : "Add"}
         </motion.button>
       </div>
+      <AnimatePresence>
+        {newTodo.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-2 text-sm"
+          >
+            <span
+              className={`${
+                newTodo.length > 100 ? "text-red-500" : "text-gray-500"
+              }`}
+            >
+              {newTodo.length}/100 characters
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </form>
   );
 };
@@ -81,7 +82,7 @@ TodoForm.propTypes = {
   setError: PropTypes.func.isRequired,
   todos: PropTypes.arrayOf(
     PropTypes.shape({
-      id: PropTypes.number.isRequired,
+      _id: PropTypes.string.isRequired,
       text: PropTypes.string.isRequired,
       completed: PropTypes.bool.isRequired,
     })
