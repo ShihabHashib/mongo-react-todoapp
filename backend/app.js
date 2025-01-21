@@ -6,13 +6,26 @@ const cors = require("cors");
 
 const app = express();
 
-// Make CORS more restrictive - modify the existing middleware
-app.use((req, res, next) => {
-  res.setHeader(
-    "Access-Control-Allow-Origin",
-    process.env.FRONTEND_URL || "http://localhost:3000"
-  );
-  // ... existing code ...
+// Middleware setup
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
+
+// Routes setup
+const todoRoutes = require("./routes/todos");
+
+app.use("/api/todos", todoRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: err.message || "Something went wrong!" });
 });
 
 // Update MongoDB connection to use environment variables
