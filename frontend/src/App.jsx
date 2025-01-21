@@ -11,6 +11,7 @@ import "./App.css";
 function App() {
   const [todos, setTodos] = useState([]);
   const { isLoading, error, sendRequest, clearError } = useHttpClient();
+  const [formError, setFormError] = useState("");
 
   useEffect(() => {
     let isActive = true;
@@ -82,7 +83,7 @@ function App() {
       animate={{ opacity: 1 }}
     >
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-xl overflow-hidden p-6">
-        <ErrorMessage error={error} onClose={clearError} />
+        <ErrorMessage error={error || formError} onClose={clearError} />
 
         <motion.h1
           className="text-3xl font-bold text-gray-800 mb-8 text-center"
@@ -95,7 +96,7 @@ function App() {
 
         <TodoForm
           onAddTodo={handleAddTodo}
-          setError={clearError}
+          setError={setFormError}
           todos={todos}
         />
 

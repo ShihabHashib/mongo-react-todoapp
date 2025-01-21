@@ -4,9 +4,10 @@ import { PlusIcon } from "@heroicons/react/24/outline";
 import PropTypes from "prop-types";
 import { validateTodo } from "../utils/validation";
 
-const TodoForm = ({ onAddTodo, setError, todos }) => {
+const TodoForm = ({ onAddTodo, setError: setGlobalError, todos }) => {
   const [newTodo, setNewTodo] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [localError, setLocalError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,10 +17,11 @@ const TodoForm = ({ onAddTodo, setError, todos }) => {
       const validatedTodo = validateTodo(newTodo, todos);
       await onAddTodo(validatedTodo);
       setNewTodo("");
-      setError("");
+      setLocalError("");
+      setGlobalError("");
     } catch (err) {
-      setError(err.message || "Failed to add todo");
-      console.error("Validation error:", err);
+      setLocalError(err.message);
+      setGlobalError(err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -33,10 +35,15 @@ const TodoForm = ({ onAddTodo, setError, todos }) => {
           value={newTodo}
           onChange={(e) => {
             setNewTodo(e.target.value);
-            setError(""); // Clear error when user starts typing
+            setLocalError("");
+            setGlobalError("");
           }}
           placeholder="Add a new todo..."
-          className="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-purple-500"
+          className={`flex-1 px-4 py-2 rounded-lg border focus:outline-none ${
+            localError
+              ? "border-red-500"
+              : "border-gray-300 focus:border-purple-500"
+          }`}
           whileFocus={{ scale: 1.02 }}
           disabled={isSubmitting}
         />
